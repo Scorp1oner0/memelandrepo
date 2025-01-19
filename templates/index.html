@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #141414;
+            color: #ffffff;
+        }
+        .websocket-status {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .dashboard {
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+        .cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .card {
+            background-color: #1f1f1f;
+            border-radius: 10px;
+            width: 300px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .token-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .token-ticker {
+            font-size: 14px;
+            color: #aaaaaa;
+        }
+        .card-body .stats {
+            display: flex;
+            justify-content: space-between;
+        }
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #aaaaaa;
+        }
+        .card-footer .market-cap, .card-footer .volume {
+            font-size: 14px;
+        }
+        .chart-container {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+        canvas {
+            width: 100%;
+            height: 200px;
+        }
+        .clickable-token {
+            cursor: pointer;
+            color: #4caf50;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        .clickable-token:hover {
+            color: #66bb6a;
+        }
+    </style>
+    <script src="https://cdn.socket.io/3.1.0/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="websocket-status" class="websocket-status">WebSocket stato: Disconnesso</div>
+    <div class="dashboard">
+        <div id="token-cards" class="cards-container"></div>
+    </div>
+    <script>
+        const socket = io('https://scorpionero.pythonanywhere.com');
+        const cardsContainer = document.getElementById('token-cards');
+        const websocketStatusElement = document.getElementById('websocket-status');
+        const tokenCards = {};  // Keep track of token cards
+
+        function createOrUpdateCards(tokensData) {
+            const updates = [];
+            const newCards = [];
+            const chartDataMap = {};
+
+            for (const [tokenId, tokenData] of Object.entries(tokensData)) {
+                const { ticker, buy_signals, sell_signals, market_cap, score } = tokenData.realtime_data[0];
+                let card = tokenCards[tokenId];
+
+                if (!card) {
+                    const newCardHTML = `
+                        <div class="card" id="card-${tokenId}">
+                            <div class="card-header">
+                                <div class="token-name"><span class="clickable-token" onclick="copyToClipboard('${tokenId}')">${ticker}</span></div>
+                                <div class="token-ticker">(${ticker})</div>
+                            </div>
+                            <div class="card-body">
+                                <div class="stats">
+                                    <div class="stat"><div class="stat-value buy-signals">${buy_signals}</div><div class="stat-label">Buy</div></div>
+                                    <div class="stat"><div class="stat-value sell-signals">${sell_signals}</div><div class="stat-label">Sell</div></div>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="market-cap">MC: <span>${market_cap}</span></div>
+                                <div class="volume">Score: ${score}</div>
+                            </div>
+                            <div class="chart-container"><canvas id="chart-${tokenId}"></canvas></div>
+                        </div>
+                    `;
+                    newCards.push(newCardHTML);
+                    tokenCards[tokenId] = newCardHTML;  // Placeholder for map
+                } else {
+                    updates.push({ cardId: tokenId, buy_signals, sell_signals, market_cap, score });
+                }
+
+                const historical_data = tokenData.historical_data || [];
+                chartDataMap[tokenId] = historical_data.map(item => ({
+                    label: new Date(item.update_time * 1000).toLocaleTimeString(),
+                    value: item.market_cap,
+                }));
+            }
+
+            if (newCards.length > 0) {
+                const fragment = document.createDocumentFragment();
+                newCards.forEach(html => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = html;
+                    fragment.appendChild(wrapper.firstElementChild);
+                });
+                cardsContainer.appendChild(fragment);
+            }
+
+            updates.forEach(({ cardId, buy_signals, sell_signals, market_cap, score }) => {
+                const card = document.getElementById(`card-${cardId}`);
+                if (card) {
+                    card.querySelector('.buy-signals').textContent = buy_signals;
+                    card.querySelector('.sell-signals').textContent = sell_signals;
+                    card.querySelector('.market-cap span').textContent = market_cap;
+                    card.querySelector('.volume').textContent = `Score: ${score}`;
+                }
+            });
+
+            Object.entries(chartDataMap).forEach(([tokenId, chartData]) => {
+                const card = document.querySelector(`#card-${tokenId}`);
+                if (card) {
+                    const ctx = card.querySelector(`#chart-${tokenId}`).getContext('2d');
+                    const labels = chartData.map(item => item.label);
+                    const values = chartData.map(item => item.value);
+                    const data = { labels, datasets: [{ data: values, borderColor: '#4e73df', backgroundColor: 'rgba(78, 115, 223, 0.1)', fill: true, tension: 0.4 }] };
+                    if (card.chart) {
+                        card.chart.data = data;
+                        card.chart.update();
+                    } else {
+                        card.chart = new Chart(ctx, { type: 'line', data, options: { responsive: true, scales: { x: { type: 'category', labels }, y: { beginAtZero: false } }, plugins: { legend: { display: false } } } });
+                    }
+                }
+            });
+        }
+
+
+
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Visualizza una conferma temporanea
+                const message = document.createElement('div');
+                message.textContent = `Token ID copiato: ${text}`;
+                message.style.position = 'fixed';
+                message.style.bottom = '10px';
+                message.style.right = '10px';
+                message.style.backgroundColor = '#4caf50';
+                message.style.color = '#fff';
+                message.style.padding = '10px';
+                message.style.borderRadius = '5px';
+                message.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.2)';
+                document.body.appendChild(message);
+                setTimeout(() => {
+                    document.body.removeChild(message);
+                }, 2000);
+            });
+        }
+
+        // Ascolta gli eventi di WebSocket
+        socket.on('connect', () => {
+            websocketStatusElement.textContent = 'WebSocket stato: Connesso';
+            websocketStatusElement.style.backgroundColor = '#28a745'; // verde
+        });
+
+        socket.on('disconnect', () => {
+            websocketStatusElement.textContent = 'WebSocket stato: Disconnesso';
+            websocketStatusElement.style.backgroundColor = '#dc3545'; // rosso
+        });
+
+        socket.on('reconnect', (attemptNumber) => {
+            websocketStatusElement.textContent = `WebSocket stato: Riconnessione in corso (${attemptNumber})`;
+            websocketStatusElement.style.backgroundColor = '#ffc107'; // giallo
+        });
+
+        socket.on('reconnect_error', () => {
+            websocketStatusElement.textContent = 'WebSocket stato: Errore riconnessione';
+            websocketStatusElement.style.backgroundColor = '#dc3545'; // rosso
+        });
+
+        socket.on('update', (data) => {
+            // Aggiorna lo stato del WebSocket
+            websocketStatusElement.textContent = 'WebSocket stato: Ricezione dati...';
+            websocketStatusElement.style.backgroundColor = '#28a745'; // verde
+
+            try {
+                console.log("Data update received:", data);
+
+                // Verifica che i dati contengano la chiave "data"
+                if (!data || !data.data) {
+                    console.error("Struttura dati non valida:", data);
+                    return;
+                }
+
+                // Passa direttamente l'oggetto "data.data" alla funzione
+                createOrUpdateCards(data.data);
+            } catch (error) {
+                console.error("Errore durante la gestione dei dati ricevuti:", error);
+            }
+        });
+
+
+        socket.on('error', (error) => {
+            console.error('WebSocket error:', error);
+        });
+    </script>
+</body>
+</html>
