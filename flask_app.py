@@ -251,10 +251,13 @@ def default_error_handler(e):
     logger.error(f"Errore Socket.IO: {e}")
 
 if __name__ == '__main__':
-
     logger.info("Avvio del server Flask-SocketIO.")
     socketio.start_background_task(target=send_ping)
+    
+    # Ottieni la porta dalla variabile d'ambiente PORT
+    port = int(os.environ.get("PORT", 8080))  # Default a 8080 se non trovata
+    
     try:
-        socketio.run(app, host='0.0.0.0', port=8081)
+        socketio.run(app, host='0.0.0.0', port=port)
     except Exception as e:
         logger.error(f"Errore nell'avvio del server: {e}")
