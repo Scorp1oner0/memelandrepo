@@ -1,4 +1,4 @@
-
+import os
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template
 from flask_cors import CORS
@@ -253,11 +253,8 @@ def default_error_handler(e):
 if __name__ == '__main__':
     logger.info("Avvio del server Flask-SocketIO.")
     socketio.start_background_task(target=send_ping)
-    
-    # Ottieni la porta dalla variabile d'ambiente PORT
-    port = int(os.environ.get("PORT", 8080))  # Default a 8080 se non trovata
-    
+    port = os.environ.get("PORT", 8080)  # Usa la variabile d'ambiente PORT, se disponibile
     try:
-        socketio.run(app, host='0.0.0.0', port=port)
+        socketio.run(app, host='0.0.0.0', port=int(port))
     except Exception as e:
         logger.error(f"Errore nell'avvio del server: {e}")
