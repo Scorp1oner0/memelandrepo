@@ -1,4 +1,3 @@
-from gevent import monkey
 # Patching di Gevent
 monkey.patch_all()
 
