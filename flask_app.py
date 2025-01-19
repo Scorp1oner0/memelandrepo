@@ -25,10 +25,7 @@ print(f"Async mode in use: {socketio.server.eio.async_mode}")
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('/home/scorpionero/unico/log/application.log', mode='a', encoding='utf-8', delay=False),
-        logging.StreamHandler()
-    ]
+   
 )
 logger = logging.getLogger(__name__)
 app.logger.setLevel(logging.DEBUG)
