@@ -39,6 +39,10 @@ DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
 # Funzione per stabilire la connessione al database
 def connect_to_db(tunnel):
+    if tunnel is None or not tunnel.is_alive():  # Controlla se il tunnel è valido
+        logger.error("Il tunnel SSH non è attivo.")
+        return None
+
     try:
         connection = mysql.connector.connect(
             user=MYSQL_CONFIG['user'],
