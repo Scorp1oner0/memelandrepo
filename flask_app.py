@@ -1,5 +1,3 @@
-# Patching di Gevent
-monkey.patch_all()
 
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template
