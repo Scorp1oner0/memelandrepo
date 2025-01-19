@@ -18,7 +18,7 @@ async_mode = "gevent"
 app = Flask(__name__)
 CORS(app)
 
-socketio = SocketIO(app, async_mode=async_mode, cors_allowed_origins="*", logger=True, engineio_logger=True, ping_interval=60, ping_timeout=120)
+socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True, ping_interval=60, ping_timeout=120)
 print(f"Async mode in use: {socketio.server.eio.async_mode}")
 
 # Configurazione logging
