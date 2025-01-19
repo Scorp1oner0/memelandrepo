@@ -144,6 +144,7 @@ def send_data_to_clients():
         try:
             data = fetch_data()
             if data:  # Solo se ci sono dati da inviare
+                logger.debug(f"Tipo di 'emit': {type(emit)}")
                 logger.debug(f"Tipo di socketio.emit: {type(socketio.emit)}")  # Log per verificare che socketio.emit sia una funzione
                 socketio.emit('update', {"data": data})
             time.sleep(0.5)  # Pausa di 0.5 secondi tra le chiamate
