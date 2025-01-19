@@ -39,6 +39,7 @@ DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
 # Funzione per stabilire la connessione al database
 def connect_to_db(tunnel):
+    logger.debug(f"Tipo di tunnel prima della creazione: {type(tunnel)}")  # Log per vedere se è già sovrascritto
     if tunnel is None or not tunnel.is_alive():  # Controlla se il tunnel è valido
         logger.error("Il tunnel SSH non è attivo.")
         return None
@@ -143,6 +144,7 @@ def send_data_to_clients():
         try:
             data = fetch_data()
             if data:  # Solo se ci sono dati da inviare
+                logger.debug(f"Tipo di socketio.emit: {type(socketio.emit)}")  # Log per verificare che socketio.emit sia una funzione
                 socketio.emit('update', {"data": data})
             time.sleep(0.5)  # Pausa di 0.5 secondi tra le chiamate
         except Exception as e:
