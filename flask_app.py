@@ -80,6 +80,17 @@ def maintain_ssh_tunnel():
 
         # Log aggiuntivi
         logger.debug(f"Tipo di 'ssh_tunnel': {type(ssh_tunnel)}")
+
+        # Controllo del tipo prima di usare is_alive()
+        if isinstance(ssh_tunnel, sshtunnel.SSHTunnelForwarder):
+            if ssh_tunnel.is_alive():
+                logger.debug("Tunnel SSH è attivo.")
+            else:
+                logger.error("Tunnel SSH non attivo.")
+        else:
+            logger.error(f"ssh_tunnel non è del tipo previsto: {type(ssh_tunnel)}")
+
+        
         logger.debug(f"Stato del tunnel: {ssh_tunnel.is_alive()}")
         logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
 
