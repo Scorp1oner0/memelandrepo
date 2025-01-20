@@ -207,6 +207,10 @@ def before_first_request():
     tunnel_thread.daemon = True
     tunnel_thread.start()
 
+    # Aspetta che il tunnel sia pronto prima di avviare il thread dei dati
+    while ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
+        time.sleep(1)  # Pausa per aspettare il tunnel
+
     # Avvia il thread per inviare i dati ai client
     data_thread = threading.Thread(target=send_data_to_clients)
     data_thread.daemon = True
@@ -215,11 +219,11 @@ def before_first_request():
 
 @socketio.on('connect')
 def handle_connect():
-    emit('status', {'message': 'Connessione avvenuta con successo'})
+    logger.info("Client connesso")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info("Client disconnesso")
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=8081)
-
-
-
-
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
