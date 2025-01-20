@@ -10,8 +10,6 @@ import logging
 import sshtunnel
 import json
 
-ssh_tunnel = None
-
 # Configurazione logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -39,15 +37,21 @@ SSH_USERNAME = 'scorpionero'
 SSH_PASSWORD = 'Mayhem123-'
 DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
+ssh_tunnel = None
+db_connection = None
+
 # Funzione per stabilire la connessione al database
-def connect_to_db(ssh_tunnel):
-    # Verifica se il tunnel è stato creato correttamente e se la porta locale è stata configurata
+def connect_to_db():
+    global db_connection
+    if db_connection:
+        return db_connection
+
     if ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
         logger.error("Il tunnel SSH non è attivo.")
         return None
 
     try:
-        connection = mysql.connector.connect(
+        db_connection = mysql.connector.connect(
             user=MYSQL_CONFIG['user'],
             password=MYSQL_CONFIG['password'],
             host='127.0.0.1',
@@ -56,7 +60,7 @@ def connect_to_db(ssh_tunnel):
             charset=MYSQL_CONFIG['charset']
         )
         logger.info("Connessione al database riuscita.")
-        return connection
+        return db_connection
     except mysql.connector.Error as err:
         logger.error(f"Errore MySQL nella connessione: {err}")
         return None
@@ -88,8 +92,7 @@ def maintain_ssh_tunnel():
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
-    global ssh_tunnel
-    connection = connect_to_db(ssh_tunnel)
+    connection = connect_to_db()
     if not connection:
         logger.error("Impossibile connettersi al database. Riprovo tra pochi secondi...")
         return {}
@@ -146,7 +149,6 @@ def fetch_data():
         return {}
     finally:
         cursor.close()
-        connection.close()
 
 # Funzione di supporto per convertire Decimal in float
 def convert_decimal_to_float(data):
