@@ -42,6 +42,9 @@ SSH_CONFIG = {
 }
 
 ssh_tunnel = None
+import paramiko
+from sshtunnel import SSHTunnelForwarder
+import time
 
 def maintain_ssh_tunnel():
     global ssh_tunnel
@@ -62,6 +65,7 @@ def maintain_ssh_tunnel():
                 )
                 # Avvia il tunnel SSH
                 ssh_tunnel.start()
+                ssh_tunnel._client.set_keepalive(60)  # Mantenere il tunnel attivo con pacchetti keep-alive ogni 60 secondi
 
                 # Verifica se la porta locale è stata assegnata
                 if ssh_tunnel.local_bind_port is None:
