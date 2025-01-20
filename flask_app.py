@@ -113,9 +113,7 @@ def fetch_data():
                 signal = signal.strip().lower()  # rimuove spazi e converte in minuscolo
                 if signal != 'new':  # Ignora 'new'
                     signals_count[signal] += 1
-                else:
-                    logger.debug(f"Segnale ignorato: {signal}")
-
+                
             realtime_data = {
                 'ticker': ticker,
                 'buy_signals': signals_count['buy'],
