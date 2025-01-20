@@ -23,8 +23,6 @@ CORS(app)
 # Configurazione SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True, ping_interval=60, ping_timeout=120)
 
-
-
 # Dati di configurazione per MySQL e SSH
 MYSQL_CONFIG = {
     'user': 'scorpionero',
@@ -35,8 +33,6 @@ MYSQL_CONFIG = {
     'charset': 'utf8mb4'
 }
 
-
-
 SSH_CONFIG = {
     'host': 'ssh.pythonanywhere.com',
     'username': 'scorpionero',
@@ -45,14 +41,12 @@ SSH_CONFIG = {
     'remote_bind_port': 3306
 }
 
-
-
 ssh_tunnel = None
 
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global ssh_tunnel
-    if ssh_tunnel is None:
+    if ssh_tunnel is None or not ssh_tunnel.is_active:
         try:
             logger.debug("Tentativo di creazione del tunnel SSH...")
             ssh_tunnel = sshtunnel.SSHTunnelForwarder(
@@ -82,7 +76,7 @@ def maintain_ssh_tunnel():
 def connect_to_db():
     global ssh_tunnel
     try:
-        if ssh_tunnel is None:
+        if ssh_tunnel is None or not ssh_tunnel.is_active:
             maintain_ssh_tunnel()
 
         # Verifica che la porta sia stata aggiornata
@@ -96,8 +90,6 @@ def connect_to_db():
     except Exception as e:
         logger.error(f"Errore nella connessione al database: {e}")
         return None
-
-
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
@@ -179,7 +171,9 @@ def send_data_to_clients():
                 # Applica la conversione a livello profondo
                 data = convert_decimal_to_float(data)
                 logger.debug("Invio dati ai client")
-                logger.disabled = True  # Disabilita temporaneamente il logging
+                
+                # Disabilita temporaneamente il logging
+                logger.disabled = True
                 socketio.emit('update', {"data": data})
                 logger.disabled = False  # Riabilita il logging
             time.sleep(0.5)
@@ -201,18 +195,10 @@ def test_tunnel():
 @app.before_first_request
 def before_first_request():
     # Avvia il tunnel SSH in un thread separato
-    tunnel_thread = threading.Thread(target=maintain_ssh_tunnel)
-    tunnel_thread.daemon = True
-    tunnel_thread.start()
-
-    # Aspetta che il tunnel sia pronto prima di avviare il thread dei dati
-    tunnel_thread.join()  # Aspetta che il tunnel sia avviato
+    threading.Thread(target=maintain_ssh_tunnel, daemon=True).start()
 
     # Avvia il thread per inviare i dati ai client
-    data_thread = threading.Thread(target=send_data_to_clients)
-    data_thread.daemon = True
-    data_thread.start()
-
+    threading.Thread(target=send_data_to_clients, daemon=True).start()
 
 @socketio.on('connect')
 def handle_connect():
