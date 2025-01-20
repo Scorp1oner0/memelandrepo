@@ -91,18 +91,20 @@ def check_ssh_tunnel():
             maintain_ssh_tunnel()
         time.sleep(60)  # Controlla ogni 60 secondi
 
-# Funzione per connettersi al database tramite il tunnel SSH
 def connect_to_db():
     global ssh_tunnel
     try:
         if ssh_tunnel is None or not ssh_tunnel.is_active:
-            maintain_ssh_tunnel()
+            maintain_ssh_tunnel()  # Assicura che il tunnel SSH sia attivo
 
         # Verifica che la porta sia stata aggiornata
         if MYSQL_CONFIG['port'] is None:
-            raise ValueError("La porta locale nel config MySQL è None.")
+            # La porta locale del tunnel SSH non è stata assegnata, tentiamo di ricollegarci
+            logger.error("La porta locale nel config MySQL è None. Riprovo a stabilire la connessione.")
+            maintain_ssh_tunnel()  # Forza la creazione del tunnel
+            if MYSQL_CONFIG['port'] is None:
+                raise ValueError("La porta locale del tunnel SSH non è stata assegnata correttamente.")
         
-        # Aggiungi un log per la porta
         logger.debug(f"Connettendo al database sulla porta {MYSQL_CONFIG['port']}...")
 
         # Connessione al database
@@ -115,6 +117,7 @@ def connect_to_db():
     except Exception as e:
         logger.error(f"Errore inaspettato: {e}")
         return None
+
 
 
 # Funzione per ottenere i dati dal database
