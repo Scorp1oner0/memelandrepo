@@ -43,7 +43,6 @@ SSH_CONFIG = {
 
 ssh_tunnel = None
 
-# Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global ssh_tunnel
     retry_attempts = 5
@@ -62,13 +61,13 @@ def maintain_ssh_tunnel():
                 )
                 ssh_tunnel.start()  # Avvia il tunnel
 
-                # Verifica che la porta locale sia assegnata
+                # Verifica se la porta locale è stata assegnata
                 if ssh_tunnel.local_bind_port is None:
                     raise ValueError("La porta locale del tunnel SSH non è stata assegnata correttamente.")
                 
-                # Aggiorna la porta nel config
-                logger.info("Tunnel SSH aperto con successo.")
-                logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
+                # Aggiorna la configurazione della porta nel MYSQL_CONFIG
+                MYSQL_CONFIG['port'] = ssh_tunnel.local_bind_port
+                logger.info(f"Tunnel SSH aperto con successo sulla porta {MYSQL_CONFIG['port']}")
                 return  # Tunnel stabilito con successo
             else:
                 logger.debug("Tunnel SSH già attivo.")
@@ -82,6 +81,7 @@ def maintain_ssh_tunnel():
             else:
                 logger.critical("Numero massimo di tentativi raggiunto per aprire il tunnel SSH.")
                 raise
+
 
 # Funzione per verificare periodicamente lo stato del tunnel SSH
 def check_ssh_tunnel():
@@ -97,13 +97,12 @@ def connect_to_db():
         if ssh_tunnel is None or not ssh_tunnel.is_active:
             maintain_ssh_tunnel()  # Assicura che il tunnel SSH sia attivo
 
-        # Verifica che la porta sia stata aggiornata
+        # Verifica che la porta locale sia assegnata correttamente
         if MYSQL_CONFIG['port'] is None:
-            # La porta locale del tunnel SSH non è stata assegnata, tentiamo di ricollegarci
-            logger.error("La porta locale nel config MySQL è None. Riprovo a stabilire la connessione.")
-            maintain_ssh_tunnel()  # Forza la creazione del tunnel
+            logger.error("La porta locale del tunnel SSH non è stata assegnata correttamente. Riprovo...")
+            maintain_ssh_tunnel()  # Forza il tentativo di riapertura del tunnel
             if MYSQL_CONFIG['port'] is None:
-                raise ValueError("La porta locale del tunnel SSH non è stata assegnata correttamente.")
+                raise ValueError("Impossibile assegnare la porta locale per MySQL.")
         
         logger.debug(f"Connettendo al database sulla porta {MYSQL_CONFIG['port']}...")
 
@@ -115,7 +114,7 @@ def connect_to_db():
         logger.error(f"Errore nella connessione al database: {e}")
         return None
     except Exception as e:
-        logger.error(f"Errore inaspettato: {e}")
+        logger.error(f"Errore inaspettato durante la connessione al database: {e}")
         return None
 
 
