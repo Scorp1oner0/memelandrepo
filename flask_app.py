@@ -40,6 +40,24 @@ DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 ssh_tunnel = None
 db_connection = None
 
+# Funzione per stabilire e mantenere il tunnel SSH aperto
+def maintain_ssh_tunnel():
+    global ssh_tunnel
+    if ssh_tunnel is None:
+        try:
+            logger.debug("Tentativo di creazione del tunnel SSH...")
+            ssh_tunnel = sshtunnel.SSHTunnelForwarder(
+                (SSH_HOST),
+                ssh_username=SSH_USERNAME,
+                ssh_password=SSH_PASSWORD,
+                remote_bind_address=(DB_HOST, 3306)
+            )
+            ssh_tunnel.start()
+            logger.info("Tunnel SSH aperto con successo.")
+            logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
+        except Exception as e:
+            logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
+
 # Funzione per stabilire la connessione al database
 def connect_to_db():
     global db_connection
@@ -47,8 +65,11 @@ def connect_to_db():
         return db_connection
 
     if ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
-        logger.error("Il tunnel SSH non è attivo.")
-        return None
+        logger.error("Il tunnel SSH non è attivo. Tentativo di riaprirlo.")
+        maintain_ssh_tunnel()  # Riapri il tunnel se non è attivo
+        if ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
+            logger.error("Il tunnel SSH non è riuscito a connettersi.")
+            return None
 
     try:
         db_connection = mysql.connector.connect(
@@ -67,28 +88,6 @@ def connect_to_db():
     except Exception as e:
         logger.error(f"Errore nella connessione al tunnel SSH o DB: {e}")
         return None
-
-
-# Funzione per stabilire e mantenere il tunnel SSH aperto
-def maintain_ssh_tunnel():
-    global ssh_tunnel
-    while True:
-        try:
-            if ssh_tunnel is None or not ssh_tunnel.is_alive():
-                logger.debug("Tentativo di creazione del tunnel SSH...")
-                ssh_tunnel = sshtunnel.SSHTunnelForwarder(
-                    (SSH_HOST),
-                    ssh_username=SSH_USERNAME,
-                    ssh_password=SSH_PASSWORD,
-                    remote_bind_address=(DB_HOST, 3306)
-                )
-                ssh_tunnel.start()
-                logger.info("Tunnel SSH aperto con successo.")
-                logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
-            time.sleep(5)  # Verifica ogni 5 secondi se il tunnel è attivo
-        except Exception as e:
-            logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
-            time.sleep(5)  # Pausa prima di tentare di nuovo
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
@@ -189,10 +188,8 @@ def test_tunnel():
 
 @app.before_first_request
 def before_first_request():
-    # Avvia il tunnel SSH in un thread separato
-    ssh_thread = threading.Thread(target=maintain_ssh_tunnel)
-    ssh_thread.daemon = True
-    ssh_thread.start()
+    # Avvia il tunnel SSH se non è già stato avviato
+    maintain_ssh_tunnel()
 
     # Avvia il thread per inviare i dati ai client
     thread = threading.Thread(target=send_data_to_clients)
