@@ -40,7 +40,7 @@ SSH_PASSWORD = 'Mayhem123-'
 DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
 # Funzione per stabilire la connessione al database
-def connect_to_db():
+def connect_to_db(ssh_tunnel):
     # Verifica se il tunnel è stato creato correttamente e se la porta locale è stata configurata
     if ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
         logger.error("Il tunnel SSH non è attivo.")
