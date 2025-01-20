@@ -62,7 +62,6 @@ def connect_to_db(tunnel):
         logger.error(f"Errore nella connessione al tunnel SSH o DB: {e}")
         return None
 
-tunnel = None
 
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
@@ -76,6 +75,12 @@ def maintain_ssh_tunnel():
         )
         tunnel.start()  # Avvia il tunnel
         logger.info("Tunnel SSH aperto con successo.")
+
+        # Log dettagliato sullo stato del tunnel
+        logger.debug(f"Tipo di tunnel dopo la creazione: {type(tunnel)}")
+        logger.debug(f"Tunnel attivo: {tunnel.is_alive()}")
+        logger.debug(f"Porta locale del tunnel: {tunnel.local_bind_port}")
+        
     except Exception as e:
         logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
         time.sleep(5)  # Ritenta dopo 5 secondi
@@ -158,6 +163,18 @@ def send_data_to_clients():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/test_tunnel')
+def test_tunnel():
+    global tunnel
+    try:
+        if tunnel and tunnel.is_alive():
+            return f"Tunnel attivo sulla porta {tunnel.local_bind_port}", 200
+        else:
+            return "Tunnel non attivo", 500
+    except Exception as e:
+        logger.error(f"Errore nel test_tunnel: {e}")
+        return f"Errore: {e}", 500
 
 @app.before_first_request
 def before_first_request():
