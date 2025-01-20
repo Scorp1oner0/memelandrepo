@@ -71,6 +71,7 @@ def maintain_ssh_tunnel():
 
 # Funzione per stabilire la connessione al database
 def connect_to_db():
+    global ssh_tunnel
     global db_connection
     if db_connection:
         return db_connection
@@ -198,13 +199,16 @@ def test_tunnel():
 
 @app.before_first_request
 def before_first_request():
-    # Avvia il tunnel SSH se non è già stato avviato
-    maintain_ssh_tunnel()
+    # Avvia il tunnel SSH in un thread separato
+    tunnel_thread = threading.Thread(target=maintain_ssh_tunnel)
+    tunnel_thread.daemon = True
+    tunnel_thread.start()
 
     # Avvia il thread per inviare i dati ai client
-    thread = threading.Thread(target=send_data_to_clients)
-    thread.daemon = True
-    thread.start()
+    data_thread = threading.Thread(target=send_data_to_clients)
+    data_thread.daemon = True
+    data_thread.start()
+
 
 @socketio.on('connect')
 def handle_connect():
