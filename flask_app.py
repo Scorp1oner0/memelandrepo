@@ -46,31 +46,50 @@ ssh_tunnel = None
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global ssh_tunnel
-    if ssh_tunnel is None or not ssh_tunnel.is_active:
+    retry_attempts = 5
+    attempt = 0
+    
+    while attempt < retry_attempts:
         try:
             logger.debug("Tentativo di creazione del tunnel SSH...")
-            ssh_tunnel = sshtunnel.SSHTunnelForwarder(
-                (SSH_CONFIG['host'], 22),
-                ssh_username=SSH_CONFIG['username'],
-                ssh_password=SSH_CONFIG['password'],
-                remote_bind_address=(SSH_CONFIG['remote_bind_host'], SSH_CONFIG['remote_bind_port']),
-                local_bind_address=('127.0.0.1', 0)  # Porta dinamica
-            )
-            ssh_tunnel.start()  # Avvia il tunnel
+            if ssh_tunnel is None or not ssh_tunnel.is_active:
+                ssh_tunnel = SSHTunnelForwarder(
+                    (SSH_CONFIG['host'], 22),
+                    ssh_username=SSH_CONFIG['username'],
+                    ssh_password=SSH_CONFIG['password'],
+                    remote_bind_address=(SSH_CONFIG['remote_bind_host'], SSH_CONFIG['remote_bind_port']),
+                    local_bind_address=('127.0.0.1', 0)  # Porta dinamica
+                )
+                ssh_tunnel.start()  # Avvia il tunnel
 
-            # Controllo che la porta locale sia assegnata
-            if ssh_tunnel.local_bind_port is None:
-                raise ValueError("La porta locale del tunnel SSH non è stata assegnata correttamente.")
-            
-            # Aggiorna la porta nel config
-            MYSQL_CONFIG['port'] = ssh_tunnel.local_bind_port
-            logger.info("Tunnel SSH aperto con successo.")
-            logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
+                # Verifica che la porta locale sia assegnata
+                if ssh_tunnel.local_bind_port is None:
+                    raise ValueError("La porta locale del tunnel SSH non è stata assegnata correttamente.")
+                
+                # Aggiorna la porta nel config
+                logger.info("Tunnel SSH aperto con successo.")
+                logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
+                return  # Tunnel stabilito con successo
+            else:
+                logger.debug("Tunnel SSH già attivo.")
+                return
         except Exception as e:
             logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
-            raise
-    else:
-        logger.debug("Tunnel SSH già attivo.")
+            attempt += 1
+            if attempt < retry_attempts:
+                logger.info(f"Riprovo a creare il tunnel SSH... (tentativo {attempt}/{retry_attempts})")
+                time.sleep(5)  # Attendi 5 secondi prima di ritentare
+            else:
+                logger.critical("Numero massimo di tentativi raggiunto per aprire il tunnel SSH.")
+                raise
+
+# Funzione per verificare periodicamente lo stato del tunnel SSH
+def check_ssh_tunnel():
+    while True:
+        if ssh_tunnel is None or not ssh_tunnel.is_active:
+            logger.info("Tunnel SSH non attivo. Tentando di ripristinarlo...")
+            maintain_ssh_tunnel()
+        time.sleep(60)  # Controlla ogni 60 secondi
 
 # Funzione per connettersi al database tramite il tunnel SSH
 def connect_to_db():
@@ -203,6 +222,7 @@ def test_tunnel():
 def before_first_request():
     # Avvia il tunnel SSH in un thread separato
     threading.Thread(target=maintain_ssh_tunnel, daemon=True).start()
+    threading.Thread(target=check_ssh_tunnel, daemon=True).start()
 
     # Avvia il thread per inviare i dati ai client
     threading.Thread(target=send_data_to_clients, daemon=True).start()
