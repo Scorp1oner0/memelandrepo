@@ -150,12 +150,28 @@ def fetch_data():
         cursor.close()
         connection.close()
 
+# Funzione di supporto per convertire Decimal in float
+def convert_decimal_to_float(data):
+    if isinstance(data, Decimal):
+        return float(data)  # Converte Decimal in float
+    elif isinstance(data, dict):
+        return {key: convert_decimal_to_float(value) for key, value in data.items()}  # Converte ricorsivamente nel dizionario
+    elif isinstance(data, list):
+        return [convert_decimal_to_float(item) for item in data]  # Converte ricorsivamente nella lista
+    else:
+        return data  # Non converte altri tipi di dati
+
+
+
 # Funzione per inviare i dati ai client ogni 0.5 secondi
 def send_data_to_clients():
     while True:
         try:
             data = fetch_data()
             if data:
+                # Applica la conversione a livello profondo
+                data = convert_decimal_to_float(data)
+                
                 socketio.emit('update', {"data": data})
             time.sleep(0.5)
         except Exception as e:
