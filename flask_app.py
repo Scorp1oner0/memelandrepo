@@ -62,6 +62,8 @@ def connect_to_db(tunnel):
         logger.error(f"Errore nella connessione al tunnel SSH o DB: {e}")
         return None
 
+tunnel = None
+
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global tunnel
@@ -81,6 +83,7 @@ def maintain_ssh_tunnel():
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
+    global tunnel
     connection = connect_to_db(tunnel)
     if not connection:
         logger.error("Impossibile connettersi al database. Riprovo tra pochi secondi...")
