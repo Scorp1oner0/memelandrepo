@@ -66,29 +66,27 @@ def connect_to_db(ssh_tunnel):
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global ssh_tunnel
-    try:
-        logger.debug("Tentativo di creazione del tunnel SSH...")
-        ssh_tunnel = sshtunnel.SSHTunnelForwarder(
-            (SSH_HOST),
-            ssh_username=SSH_USERNAME,
-            ssh_password=SSH_PASSWORD,
-            remote_bind_address=(DB_HOST, 3306)
-        )
-        ssh_tunnel.start()
-        logger.info("Tunnel SSH aperto con successo.")
+    while True:
+        try:
+            logger.debug("Tentativo di creazione del tunnel SSH...")
+            ssh_tunnel = sshtunnel.SSHTunnelForwarder(
+                (SSH_HOST),
+                ssh_username=SSH_USERNAME,
+                ssh_password=SSH_PASSWORD,
+                remote_bind_address=(DB_HOST, 3306)
+            )
+            ssh_tunnel.start()
+            logger.info("Tunnel SSH aperto con successo.")
 
-        logger.debug(f"Tipo di 'ssh_tunnel': {type(ssh_tunnel)}")
-        
-        # Log del tunnel SSH
-        logger.debug(f"Stato del tunnel: {ssh_tunnel.is_alive()}")
-        logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
-
-    except Exception as e:
-        logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
-        logger.debug(f"Tipo di 'ssh_tunnel' al momento dell'errore: {type(ssh_tunnel)}")
-        logger.debug(f"Valore di 'ssh_tunnel': {ssh_tunnel}")
-        time.sleep(5)  # Pausa prima di tentare di nuovo
-        maintain_ssh_tunnel()  # Riprova ad aprire il tunnel
+            logger.debug(f"Tipo di 'ssh_tunnel': {type(ssh_tunnel)}")
+            logger.debug(f"Stato del tunnel: {ssh_tunnel.is_alive()}")
+            logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
+            break  # Se il tunnel è aperto correttamente, esci dal ciclo
+        except Exception as e:
+            logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
+            logger.debug(f"Tipo di 'ssh_tunnel' al momento dell'errore: {type(ssh_tunnel)}")
+            logger.debug(f"Valore di 'ssh_tunnel': {ssh_tunnel}")
+            time.sleep(5)  # Pausa prima di tentare di nuovo
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
