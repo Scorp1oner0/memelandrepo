@@ -10,7 +10,7 @@ import logging
 import sshtunnel
 import json
 
-tunnel = None
+ssh_tunnel = None
 
 # Configurazione logging
 logging.basicConfig(
@@ -40,9 +40,8 @@ SSH_PASSWORD = 'Mayhem123-'
 DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
 # Funzione per stabilire la connessione al database
-def connect_to_db(tunnel):
-    logger.debug(f"Tipo di tunnel prima della creazione: {type(tunnel)}")  # Log per vedere se è già sovrascritto
-    if tunnel is None or not tunnel.is_alive():  # Controlla se il tunnel è valido
+def connect_to_db(ssh_tunnel):
+    if ssh_tunnel is None or not ssh_tunnel.is_alive():
         logger.error("Il tunnel SSH non è attivo.")
         return None
 
@@ -51,7 +50,7 @@ def connect_to_db(tunnel):
             user=MYSQL_CONFIG['user'],
             password=MYSQL_CONFIG['password'],
             host='127.0.0.1',
-            port=tunnel.local_bind_port,
+            port=ssh_tunnel.local_bind_port,
             database=MYSQL_CONFIG['database'],
             charset=MYSQL_CONFIG['charset']
         )
@@ -67,35 +66,35 @@ def connect_to_db(tunnel):
 
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
-    global tunnel
+    global ssh_tunnel
     try:
         logger.debug("Tentativo di creazione del tunnel SSH...")
-        tunnel = sshtunnel.SSHTunnelForwarder(
+        ssh_tunnel = sshtunnel.SSHTunnelForwarder(
             (SSH_HOST),
             ssh_username=SSH_USERNAME,
             ssh_password=SSH_PASSWORD,
             remote_bind_address=(DB_HOST, 3306)
         )
-        tunnel.start()
+        ssh_tunnel.start()
         logger.info("Tunnel SSH aperto con successo.")
 
         # Log aggiuntivi
-        logger.debug(f"Tipo di 'tunnel': {type(tunnel)}")
-        logger.debug(f"Stato del tunnel: {tunnel.is_alive()}")
-        logger.debug(f"Porta locale del tunnel: {tunnel.local_bind_port}")
+        logger.debug(f"Tipo di 'ssh_tunnel': {type(ssh_tunnel)}")
+        logger.debug(f"Stato del tunnel: {ssh_tunnel.is_alive()}")
+        logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
 
     except Exception as e:
         logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
-        logger.debug(f"Tipo di 'tunnel' al momento dell'errore: {type(tunnel)}")
-        logger.debug(f"Valore di 'tunnel': {tunnel}")
+        logger.debug(f"Tipo di 'ssh_tunnel' al momento dell'errore: {type(ssh_tunnel)}")
+        logger.debug(f"Valore di 'ssh_tunnel': {ssh_tunnel}")
         time.sleep(5)
         maintain_ssh_tunnel()
 
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
-    global tunnel
-    connection = connect_to_db(tunnel)
+    global ssh_tunnel
+    connection = connect_to_db(ssh_tunnel)
     if not connection:
         logger.error("Impossibile connettersi al database. Riprovo tra pochi secondi...")
         return {}
@@ -114,7 +113,7 @@ def fetch_data():
             market_cap = token['market_cap']
             update_time = token['update_time']
 
-            signals_count = { "buy": 0, "sell": 0, "extra": 0 }
+            signals_count = {"buy": 0, "sell": 0, "extra": 0}
             for signal in signals:
                 signals_count[signal.strip().lower()] += 1
 
@@ -157,11 +156,9 @@ def send_data_to_clients():
     while True:
         try:
             data = fetch_data()
-            if data:  # Solo se ci sono dati da inviare
-                logger.debug(f"Tipo di 'emit': {type(emit)}")
-                logger.debug(f"Tipo di socketio.emit: {type(socketio.emit)}")  # Log per verificare che socketio.emit sia una funzione
+            if data:
                 socketio.emit('update', {"data": data})
-            time.sleep(0.5)  # Pausa di 0.5 secondi tra le chiamate
+            time.sleep(0.5)
         except Exception as e:
             logger.error(f"Errore durante l'invio dei dati: {e}")
             time.sleep(5)
@@ -172,10 +169,10 @@ def index():
 
 @app.route('/test_tunnel')
 def test_tunnel():
-    global tunnel
+    global ssh_tunnel
     try:
-        if tunnel and tunnel.is_alive():
-            return f"Tunnel attivo sulla porta {tunnel.local_bind_port}", 200
+        if ssh_tunnel and ssh_tunnel.is_alive():
+            return f"Tunnel attivo sulla porta {ssh_tunnel.local_bind_port}", 200
         else:
             return "Tunnel non attivo", 500
     except Exception as e:
