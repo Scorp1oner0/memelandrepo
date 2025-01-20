@@ -60,11 +60,16 @@ def maintain_ssh_tunnel():
                 ssh_username=SSH_CONFIG['username'],
                 ssh_password=SSH_CONFIG['password'],
                 remote_bind_address=(SSH_CONFIG['remote_bind_host'], SSH_CONFIG['remote_bind_port']),
-                local_bind_address=('127.0.0.1', 0)  # Porta locale dinamica
+                local_bind_address=('127.0.0.1', 0)  # Porta dinamica
             )
-            # Avvia il tunnel
-            ssh_tunnel.start()
-            MYSQL_CONFIG['port'] = ssh_tunnel.local_bind_port  # Aggiorna la porta locale nel config
+            ssh_tunnel.start()  # Avvia il tunnel
+
+            # Controllo che la porta locale sia assegnata
+            if ssh_tunnel.local_bind_port is None:
+                raise ValueError("La porta locale del tunnel SSH non è stata assegnata correttamente.")
+            
+            # Aggiorna la porta nel config
+            MYSQL_CONFIG['port'] = ssh_tunnel.local_bind_port
             logger.info("Tunnel SSH aperto con successo.")
             logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
         except Exception as e:
@@ -73,8 +78,6 @@ def maintain_ssh_tunnel():
     else:
         logger.debug("Tunnel SSH già attivo.")
 
-
-
 # Funzione per connettersi al database tramite il tunnel SSH
 def connect_to_db():
     global ssh_tunnel
@@ -82,13 +85,18 @@ def connect_to_db():
         if ssh_tunnel is None:
             maintain_ssh_tunnel()
 
-        # Creazione della connessione al database
+        # Verifica che la porta sia stata aggiornata
+        if MYSQL_CONFIG['port'] is None:
+            raise ValueError("La porta locale nel config MySQL è None.")
+
+        # Connessione al database
         connection = mysql.connector.connect(**MYSQL_CONFIG)
         logger.info("Connessione al database stabilita con successo.")
         return connection
     except Exception as e:
         logger.error(f"Errore nella connessione al database: {e}")
         return None
+
 
 
 # Funzione per ottenere i dati dal database
