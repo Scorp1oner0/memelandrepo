@@ -181,7 +181,9 @@ def send_data_to_clients():
                 # Applica la conversione a livello profondo
                 data = convert_decimal_to_float(data)
                 logger.debug("Invio dati ai client")
+                logger.disabled = True  # Disabilita temporaneamente il logging
                 socketio.emit('update', {"data": data})
+                logger.disabled = False  # Riabilita il logging
             time.sleep(0.5)
         except Exception as e:
             logger.error(f"Errore durante l'invio dei dati: {e}")
