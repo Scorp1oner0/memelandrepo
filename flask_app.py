@@ -180,6 +180,7 @@ def send_data_to_clients():
             if data:
                 # Applica la conversione a livello profondo
                 data = convert_decimal_to_float(data)
+                logger.debug("Invio dati ai client")
                 socketio.emit('update', {"data": data})
             time.sleep(0.5)
         except Exception as e:
