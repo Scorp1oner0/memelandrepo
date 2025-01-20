@@ -110,7 +110,11 @@ def fetch_data():
 
             signals_count = {"buy": 0, "sell": 0, "extra": 0}
             for signal in signals:
-                signals_count[signal.strip().lower()] += 1
+                signal = signal.strip().lower()  # rimuove spazi e converte in minuscolo
+                if signal != 'new':  # Ignora 'new'
+                    signals_count[signal] += 1
+                else:
+                    logger.debug(f"Segnale ignorato: {signal}")
 
             realtime_data = {
                 'ticker': ticker,
