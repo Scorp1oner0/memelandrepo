@@ -40,8 +40,9 @@ SSH_PASSWORD = 'Mayhem123-'
 DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
 # Funzione per stabilire la connessione al database
-def connect_to_db(ssh_tunnel):
-    if ssh_tunnel is None or not getattr(ssh_tunnel, 'is_alive', lambda: False)():
+def connect_to_db():
+    # Verifica se il tunnel è stato creato correttamente e se la porta locale è stata configurata
+    if ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
         logger.error("Il tunnel SSH non è attivo.")
         return None
 
@@ -63,6 +64,7 @@ def connect_to_db(ssh_tunnel):
         logger.error(f"Errore nella connessione al tunnel SSH o DB: {e}")
         return None
 
+
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global ssh_tunnel
@@ -77,16 +79,12 @@ def maintain_ssh_tunnel():
             )
             ssh_tunnel.start()
             logger.info("Tunnel SSH aperto con successo.")
-
-            logger.debug(f"Tipo di 'ssh_tunnel': {type(ssh_tunnel)}")
-            logger.debug(f"Stato del tunnel: {ssh_tunnel.is_alive()}")
             logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
             break  # Se il tunnel è aperto correttamente, esci dal ciclo
         except Exception as e:
             logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
-            logger.debug(f"Tipo di 'ssh_tunnel' al momento dell'errore: {type(ssh_tunnel)}")
-            logger.debug(f"Valore di 'ssh_tunnel': {ssh_tunnel}")
             time.sleep(5)  # Pausa prima di tentare di nuovo
+
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
@@ -163,18 +161,13 @@ def send_data_to_clients():
 @app.route('/')
 def index():
     return render_template('index.html')
-
 @app.route('/test_tunnel')
 def test_tunnel():
-    global ssh_tunnel
-    try:
-        if ssh_tunnel and ssh_tunnel.is_alive():
-            return f"Tunnel attivo sulla porta {ssh_tunnel.local_bind_port}", 200
-        else:
-            return "Tunnel non attivo", 500
-    except Exception as e:
-        logger.error(f"Errore nel test_tunnel: {e}")
-        return f"Errore: {e}", 500
+    if ssh_tunnel and hasattr(ssh_tunnel, 'local_bind_port') and ssh_tunnel.local_bind_port:
+        return f"Tunnel attivo sulla porta {ssh_tunnel.local_bind_port}", 200
+    else:
+        return "Tunnel non attivo", 500
+
 
 @app.before_first_request
 def before_first_request():
