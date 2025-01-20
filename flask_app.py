@@ -23,23 +23,31 @@ CORS(app)
 # Configurazione SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True, ping_interval=60, ping_timeout=120)
 
+
+
 # Dati di configurazione per MySQL e SSH
 MYSQL_CONFIG = {
     'user': 'scorpionero',
     'password': 'MYSQL123-',
-    'host': '127.0.0.1',
-    'port': 3306,
+    'host': '127.0.0.1',  # Tunnel locale
+    'port': None,  # Da assegnare dinamicamente
     'database': 'scorpionero$tokens',
     'charset': 'utf8mb4'
 }
 
-SSH_HOST = 'ssh.pythonanywhere.com'
-SSH_USERNAME = 'scorpionero'
-SSH_PASSWORD = 'Mayhem123-'
-DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
+
+
+SSH_CONFIG = {
+    'host': 'ssh.pythonanywhere.com',
+    'username': 'scorpionero',
+    'password': 'Mayhem123-',
+    'remote_bind_host': 'scorpionero.mysql.pythonanywhere-services.com',
+    'remote_bind_port': 3306
+}
+
+
 
 ssh_tunnel = None
-db_connection = None
 
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
@@ -48,15 +56,15 @@ def maintain_ssh_tunnel():
         try:
             logger.debug("Tentativo di creazione del tunnel SSH...")
             ssh_tunnel = sshtunnel.SSHTunnelForwarder(
-                (SSH_HOST),
-                ssh_username=SSH_USERNAME,
-                ssh_password=SSH_PASSWORD,
-                remote_bind_address=(DB_HOST, 3306),
-                # Keep-alive per evitare la chiusura
-                local_bind_address=('0.0.0.0', 0)  # Assegna automaticamente la porta locale
+                (SSH_CONFIG['host'], 22),
+                ssh_username=SSH_CONFIG['username'],
+                ssh_password=SSH_CONFIG['password'],
+                remote_bind_address=(SSH_CONFIG['remote_bind_host'], SSH_CONFIG['remote_bind_port']),
+                local_bind_address=('127.0.0.1', 0)  # Porta locale dinamica
             )
             # Avvia il tunnel
             ssh_tunnel.start()
+            MYSQL_CONFIG['port'] = ssh_tunnel.local_bind_port  # Aggiorna la porta locale nel config
             logger.info("Tunnel SSH aperto con successo.")
             logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
         except Exception as e:
@@ -65,28 +73,23 @@ def maintain_ssh_tunnel():
     else:
         logger.debug("Tunnel SSH già attivo.")
 
-# Funzione per stabilire la connessione al database
-# Funzione per creare il tunnel SSH e connettersi al database
+
+
+# Funzione per connettersi al database tramite il tunnel SSH
 def connect_to_db():
+    global ssh_tunnel
     try:
-        with SSHTunnelForwarder(
-            ('ssh.pythonanywhere.com', 22),
-            ssh_username='your_username', 
-            ssh_password='your_password',
-            remote_bind_address=('scorpionero.mysql.pythonanywhere-services.com', 3306)
-        ) as tunnel:
-            time.sleep(5)  # Aggiungi un breve ritardo per garantire che il tunnel sia pronto
-            connection = mysql.connector.connect(
-                user='your_db_user',
-                password='your_db_password',
-                host='127.0.0.1',
-                port=tunnel.local_bind_port,
-                database='your_db_name'
-            )
-            return connection
+        if ssh_tunnel is None:
+            maintain_ssh_tunnel()
+
+        # Creazione della connessione al database
+        connection = mysql.connector.connect(**MYSQL_CONFIG)
+        logger.info("Connessione al database stabilita con successo.")
+        return connection
     except Exception as e:
-        print(f"Errore nella connessione al database: {e}")
+        logger.error(f"Errore nella connessione al database: {e}")
         return None
+
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
