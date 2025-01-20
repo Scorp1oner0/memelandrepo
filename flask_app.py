@@ -10,6 +10,8 @@ import logging
 import sshtunnel
 import json
 
+tunnel = None
+
 # Configurazione logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -67,24 +69,28 @@ def connect_to_db(tunnel):
 def maintain_ssh_tunnel():
     global tunnel
     try:
+        logger.debug("Tentativo di creazione del tunnel SSH...")
         tunnel = sshtunnel.SSHTunnelForwarder(
             (SSH_HOST),
             ssh_username=SSH_USERNAME,
             ssh_password=SSH_PASSWORD,
             remote_bind_address=(DB_HOST, 3306)
         )
-        tunnel.start()  # Avvia il tunnel
+        tunnel.start()
         logger.info("Tunnel SSH aperto con successo.")
 
-        # Log dettagliato sullo stato del tunnel
-        logger.debug(f"Tipo di tunnel dopo la creazione: {type(tunnel)}")
-        logger.debug(f"Tunnel attivo: {tunnel.is_alive()}")
+        # Log aggiuntivi
+        logger.debug(f"Tipo di 'tunnel': {type(tunnel)}")
+        logger.debug(f"Stato del tunnel: {tunnel.is_alive()}")
         logger.debug(f"Porta locale del tunnel: {tunnel.local_bind_port}")
-        
+
     except Exception as e:
         logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
-        time.sleep(5)  # Ritenta dopo 5 secondi
+        logger.debug(f"Tipo di 'tunnel' al momento dell'errore: {type(tunnel)}")
+        logger.debug(f"Valore di 'tunnel': {tunnel}")
+        time.sleep(5)
         maintain_ssh_tunnel()
+
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
