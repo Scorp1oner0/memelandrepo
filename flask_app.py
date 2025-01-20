@@ -52,6 +52,7 @@ def maintain_ssh_tunnel():
         try:
             logger.debug("Tentativo di creazione del tunnel SSH...")
             if ssh_tunnel is None or not ssh_tunnel.is_active:
+                # Crea il tunnel SSH
                 ssh_tunnel = SSHTunnelForwarder(
                     (SSH_CONFIG['host'], 22),
                     ssh_username=SSH_CONFIG['username'],
@@ -59,7 +60,8 @@ def maintain_ssh_tunnel():
                     remote_bind_address=(SSH_CONFIG['remote_bind_host'], SSH_CONFIG['remote_bind_port']),
                     local_bind_address=('127.0.0.1', 0)  # Porta dinamica
                 )
-                ssh_tunnel.start()  # Avvia il tunnel
+                # Avvia il tunnel SSH
+                ssh_tunnel.start()
 
                 # Verifica se la porta locale è stata assegnata
                 if ssh_tunnel.local_bind_port is None:
