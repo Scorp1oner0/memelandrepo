@@ -74,21 +74,21 @@ def maintain_ssh_tunnel():
     global ssh_tunnel
     while True:
         try:
-            logger.debug("Tentativo di creazione del tunnel SSH...")
-            ssh_tunnel = sshtunnel.SSHTunnelForwarder(
-                (SSH_HOST),
-                ssh_username=SSH_USERNAME,
-                ssh_password=SSH_PASSWORD,
-                remote_bind_address=(DB_HOST, 3306)
-            )
-            ssh_tunnel.start()
-            logger.info("Tunnel SSH aperto con successo.")
-            logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
-            break  # Se il tunnel è aperto correttamente, esci dal ciclo
+            if ssh_tunnel is None or not ssh_tunnel.is_alive():
+                logger.debug("Tentativo di creazione del tunnel SSH...")
+                ssh_tunnel = sshtunnel.SSHTunnelForwarder(
+                    (SSH_HOST),
+                    ssh_username=SSH_USERNAME,
+                    ssh_password=SSH_PASSWORD,
+                    remote_bind_address=(DB_HOST, 3306)
+                )
+                ssh_tunnel.start()
+                logger.info("Tunnel SSH aperto con successo.")
+                logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
+            time.sleep(5)  # Verifica ogni 5 secondi se il tunnel è attivo
         except Exception as e:
             logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
             time.sleep(5)  # Pausa prima di tentare di nuovo
-
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
