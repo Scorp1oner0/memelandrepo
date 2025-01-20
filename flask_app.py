@@ -82,14 +82,21 @@ def connect_to_db():
         # Verifica che la porta sia stata aggiornata
         if MYSQL_CONFIG['port'] is None:
             raise ValueError("La porta locale nel config MySQL è None.")
+        
+        # Aggiungi un log per la porta
+        logger.debug(f"Connettendo al database sulla porta {MYSQL_CONFIG['port']}...")
 
         # Connessione al database
         connection = mysql.connector.connect(**MYSQL_CONFIG)
         logger.info("Connessione al database stabilita con successo.")
         return connection
-    except Exception as e:
+    except mysql.connector.Error as e:
         logger.error(f"Errore nella connessione al database: {e}")
         return None
+    except Exception as e:
+        logger.error(f"Errore inaspettato: {e}")
+        return None
+
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
