@@ -65,35 +65,26 @@ def maintain_ssh_tunnel():
         logger.debug("Tunnel SSH già attivo.")
 
 # Funzione per stabilire la connessione al database
+# Funzione per creare il tunnel SSH e connettersi al database
 def connect_to_db():
-    global ssh_tunnel
-    global db_connection
-    if db_connection:
-        return db_connection
-
-    if ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
-        logger.error("Il tunnel SSH non è attivo. Tentativo di riaprirlo.")
-        maintain_ssh_tunnel()  # Riapri il tunnel se non è attivo
-        if ssh_tunnel is None or not hasattr(ssh_tunnel, 'local_bind_port') or ssh_tunnel.local_bind_port is None:
-            logger.error("Il tunnel SSH non è riuscito a connettersi.")
-            return None
-
     try:
-        db_connection = mysql.connector.connect(
-            user=MYSQL_CONFIG['user'],
-            password=MYSQL_CONFIG['password'],
-            host='127.0.0.1',
-            port=ssh_tunnel.local_bind_port,
-            database=MYSQL_CONFIG['database'],
-            charset=MYSQL_CONFIG['charset']
-        )
-        logger.info("Connessione al database riuscita.")
-        return db_connection
-    except mysql.connector.Error as err:
-        logger.error(f"Errore MySQL nella connessione: {err}")
-        return None
+        with SSHTunnelForwarder(
+            ('ssh.pythonanywhere.com', 22),
+            ssh_username='your_username', 
+            ssh_password='your_password',
+            remote_bind_address=('scorpionero.mysql.pythonanywhere-services.com', 3306)
+        ) as tunnel:
+            time.sleep(5)  # Aggiungi un breve ritardo per garantire che il tunnel sia pronto
+            connection = mysql.connector.connect(
+                user='your_db_user',
+                password='your_db_password',
+                host='127.0.0.1',
+                port=tunnel.local_bind_port,
+                database='your_db_name'
+            )
+            return connection
     except Exception as e:
-        logger.error(f"Errore nella connessione al tunnel SSH o DB: {e}")
+        print(f"Errore nella connessione al database: {e}")
         return None
 
 # Funzione per ottenere i dati dal database
