@@ -37,6 +37,7 @@ SSH_USERNAME = 'scorpionero'
 SSH_PASSWORD = 'Mayhem123-'
 DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
+# Variabili globali per la connessione SSH e al DB
 ssh_tunnel = None
 db_connection = None
 
