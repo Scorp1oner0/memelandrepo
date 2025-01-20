@@ -161,8 +161,6 @@ def convert_decimal_to_float(data):
     else:
         return data  # Non converte altri tipi di dati
 
-
-
 # Funzione per inviare i dati ai client ogni 0.5 secondi
 def send_data_to_clients():
     while True:
@@ -181,13 +179,13 @@ def send_data_to_clients():
 @app.route('/')
 def index():
     return render_template('index.html')
+
 @app.route('/test_tunnel')
 def test_tunnel():
     if ssh_tunnel and hasattr(ssh_tunnel, 'local_bind_port') and ssh_tunnel.local_bind_port:
         return f"Tunnel attivo sulla porta {ssh_tunnel.local_bind_port}", 200
     else:
         return "Tunnel non attivo", 500
-
 
 @app.before_first_request
 def before_first_request():
