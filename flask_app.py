@@ -63,7 +63,6 @@ def connect_to_db(ssh_tunnel):
         logger.error(f"Errore nella connessione al tunnel SSH o DB: {e}")
         return None
 
-
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global ssh_tunnel
@@ -78,19 +77,9 @@ def maintain_ssh_tunnel():
         ssh_tunnel.start()
         logger.info("Tunnel SSH aperto con successo.")
 
-        # Log aggiuntivi
         logger.debug(f"Tipo di 'ssh_tunnel': {type(ssh_tunnel)}")
-
-        # Controllo del tipo prima di usare is_alive()
-        if isinstance(ssh_tunnel, sshtunnel.SSHTunnelForwarder):
-            if ssh_tunnel.is_alive():
-                logger.debug("Tunnel SSH è attivo.")
-            else:
-                logger.error("Tunnel SSH non attivo.")
-        else:
-            logger.error(f"ssh_tunnel non è del tipo previsto: {type(ssh_tunnel)}")
-
         
+        # Log del tunnel SSH
         logger.debug(f"Stato del tunnel: {ssh_tunnel.is_alive()}")
         logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
 
@@ -98,9 +87,8 @@ def maintain_ssh_tunnel():
         logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
         logger.debug(f"Tipo di 'ssh_tunnel' al momento dell'errore: {type(ssh_tunnel)}")
         logger.debug(f"Valore di 'ssh_tunnel': {ssh_tunnel}")
-        time.sleep(5)
-        maintain_ssh_tunnel()
-
+        time.sleep(5)  # Pausa prima di tentare di nuovo
+        maintain_ssh_tunnel()  # Riprova ad aprire il tunnel
 
 # Funzione per ottenere i dati dal database
 def fetch_data():
