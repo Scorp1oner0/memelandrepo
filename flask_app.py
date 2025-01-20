@@ -8,6 +8,7 @@ import mysql.connector
 from decimal import Decimal
 import logging
 import sshtunnel
+from sshtunnel import SSHTunnelForwarder
 import json
 
 # Configurazione logging
