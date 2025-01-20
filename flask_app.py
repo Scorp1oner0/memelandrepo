@@ -37,7 +37,6 @@ SSH_USERNAME = 'scorpionero'
 SSH_PASSWORD = 'Mayhem123-'
 DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 
-# Variabili globali per la connessione SSH e al DB
 ssh_tunnel = None
 db_connection = None
 
@@ -58,6 +57,7 @@ def maintain_ssh_tunnel():
             logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
         except Exception as e:
             logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
+            raise
 
 # Funzione per stabilire la connessione al database
 def connect_to_db():
@@ -169,7 +169,6 @@ def send_data_to_clients():
             if data:
                 # Applica la conversione a livello profondo
                 data = convert_decimal_to_float(data)
-                
                 socketio.emit('update', {"data": data})
             time.sleep(0.5)
         except Exception as e:
@@ -203,3 +202,4 @@ def handle_connect():
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8081)
+
