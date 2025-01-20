@@ -40,6 +40,7 @@ DB_HOST = 'scorpionero.mysql.pythonanywhere-services.com'
 ssh_tunnel = None
 db_connection = None
 
+
 # Funzione per stabilire e mantenere il tunnel SSH aperto
 def maintain_ssh_tunnel():
     global ssh_tunnel
@@ -50,11 +51,20 @@ def maintain_ssh_tunnel():
                 (SSH_HOST),
                 ssh_username=SSH_USERNAME,
                 ssh_password=SSH_PASSWORD,
-                remote_bind_address=(DB_HOST, 3306)
+                remote_bind_address=(DB_HOST, 3306),
+                # Keep-alive per evitare la chiusura
+                local_bind_address=('0.0.0.0', 0)  # Assegna automaticamente la porta locale
             )
+            # Avvia il tunnel in modo da rimanere attivo
             ssh_tunnel.start()
             logger.info("Tunnel SSH aperto con successo.")
             logger.debug(f"Porta locale del tunnel: {ssh_tunnel.local_bind_port}")
+
+            # Ciclo per mantenere il tunnel attivo
+            while True:
+                time.sleep(60)  # Pausa per 60 secondi, evita chiusura automatica
+                logger.debug("Tunnel SSH mantenuto attivo...")
+
         except Exception as e:
             logger.error(f"Errore nell'aprire il tunnel SSH: {e}")
             raise
