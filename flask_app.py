@@ -25,8 +25,8 @@ socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=
 
 # Dati di configurazione per MySQL e SSH
 MYSQL_CONFIG = {
-    'user': 'scorpionero',
-    'password': 'MYSQL123-',
+    'user': '*******',
+    'password': '*******',
     'host': '127.0.0.1',  # Tunnel locale
     'port': None,  # Da assegnare dinamicamente
     'database': 'scorpionero$tokens',
@@ -35,8 +35,8 @@ MYSQL_CONFIG = {
 
 SSH_CONFIG = {
     'host': 'ssh.pythonanywhere.com',
-    'username': 'scorpionero',
-    'password': 'Mayhem123-',
+    'username': '*******',
+    'password': '*******-',
     'remote_bind_host': 'scorpionero.mysql.pythonanywhere-services.com',
     'remote_bind_port': 3306
 }
